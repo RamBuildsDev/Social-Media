@@ -63,14 +63,14 @@ const verifyPassword = async (plainPassword, hashedPassword) => {
 
 // TODO: Implement findUsersByName function for search functionality
 // This should support partial name matching and pagination
-async function findUsersByName(search, limit = 20, offset = 0, excludeId) {
+async function findUsersByName(search, limit = 20, offset = 0, excludeId = 0) {
   const like = `%${search}%`;
   const result = await query(
     `SELECT id, username, full_name
        FROM users
       WHERE is_deleted = FALSE
         AND (username ILIKE $1 OR full_name ILIKE $1)
-        AND id != $4  
+        AND ($4 = 0 OR id != $4)
       ORDER BY username ASC
       LIMIT $2 OFFSET $3`,
     [like, limit, offset, excludeId]
@@ -155,7 +155,7 @@ async function getUserByEmail(email) {
 async function getPublicProfile(targetUserId, currentUserId) {
   const result = await query(
     `SELECT 
-       u.id, u.username, u.full_name, u.email, u.created_at, u.profile_pic_url, -- <--- ADDED THIS!
+       u.id, u.username, u.full_name, u.created_at, u.profile_pic_url,
        (SELECT COUNT(*)::int FROM follows WHERE followee_id = u.id) AS followers,
        (SELECT COUNT(*)::int FROM follows WHERE follower_id = u.id) AS following,
        (SELECT EXISTS(SELECT 1 FROM follows WHERE follower_id = $2 AND followee_id = u.id)) AS is_following

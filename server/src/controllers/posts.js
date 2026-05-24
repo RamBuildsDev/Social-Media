@@ -161,17 +161,18 @@ const remove = async (req, res) => {
 
 const getFeed = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user?.id || null;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    // Fetch the mixed feed (Followed users prioritized + Global suggestions)
-    const posts = await getMixedFeed(userId, limit, offset);
+    const posts = userId
+      ? await getMixedFeed(userId, limit, offset)
+      : await getGlobalFeed(limit, offset, 0);
 
     res.json({ 
       posts, 
-      feedType: "mixed" // Tell frontend this is a mixed feed
+      feedType: userId ? "mixed" : "public"
     });
 
   } catch (error) {

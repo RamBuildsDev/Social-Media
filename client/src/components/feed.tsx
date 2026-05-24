@@ -8,19 +8,21 @@ import { API_URL } from "@/lib/config"
 
 interface FeedProps {
   onUserClick: (id: number) => void
+  requireAuth?: () => void
 }
 
-export function Feed({ onUserClick }: FeedProps) {
+export function Feed({ onUserClick, requireAuth }: FeedProps) {
   const { token, user } = useAuth()
 
   const { data: feedData, isLoading, error } = useQuery({
     queryKey: ["feed", user?.id],
     queryFn: async () => {
-      const res = await fetch(`${API_URL}/api/posts/feed`, { headers: { Authorization: `Bearer ${token}` } })
+      const headers = token ? { Authorization: `Bearer ${token}` } : undefined
+      const res = await fetch(`${API_URL}/api/posts/feed`, { headers })
       if (!res.ok) throw new Error("Failed to fetch feed")
       return res.json()
     },
-    enabled: !!token && !!user,
+    enabled: !!token || !user,
   })
 
   const posts = feedData?.posts || []
@@ -51,8 +53,11 @@ export function Feed({ onUserClick }: FeedProps) {
   )
 
   if (error) return (
-    <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
-      <p className="text-muted-foreground text-sm">Failed to load feed. Try refreshing.</p>
+    <div className="premium-card flex flex-col items-center justify-center rounded-2xl px-6 py-16 text-center">
+      <p className="text-sm font-bold">Could not reach the feed API</p>
+      <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
+        Start the backend server on port 5000 or set `NEXT_PUBLIC_API_URL` to your deployed API URL.
+      </p>
     </div>
   )
 
@@ -87,6 +92,7 @@ export function Feed({ onUserClick }: FeedProps) {
           user={{ username: post.username, full_name: post.full_name, id: post.user_id, profile_pic_url: post.profile_pic_url }}
           createdAt={post.created_at} likeCount={post.like_count || 0} commentCount={post.comment_count || 0}
           hasLiked={post.has_liked} commentsEnabled={post.comments_enabled} isSuggested={false}
+          requireAuth={requireAuth}
         />
       ))}
 
@@ -104,6 +110,7 @@ export function Feed({ onUserClick }: FeedProps) {
               user={{ username: post.username, full_name: post.full_name, id: post.user_id, profile_pic_url: post.profile_pic_url }}
               createdAt={post.created_at} likeCount={post.like_count || 0} commentCount={post.comment_count || 0}
               hasLiked={post.has_liked} commentsEnabled={post.comments_enabled} isSuggested={true}
+              requireAuth={requireAuth}
             />
           ))}
         </>

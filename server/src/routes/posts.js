@@ -15,7 +15,7 @@ const upload = require("../middleware/upload"); // Import the upload middleware
 
 const router = express.Router();
 
-router.get("/feed", authenticateToken, getFeed);
+router.get("/feed", optionalAuth, getFeed);
 router.get("/my", authenticateToken, getMyPosts);
 router.get("/user/:user_id(\\d+)", optionalAuth, getUserPosts);
 router.get("/search", optionalAuth, searchPosts);

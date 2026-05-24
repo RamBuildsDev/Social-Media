@@ -18,13 +18,13 @@ const SocketContext = createContext<SocketContextType>({
 export const useSocket = () => useContext(SocketContext)
 
 export function SocketProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth()
+  const { user, token } = useAuth()
   const [socket, setSocket] = useState<Socket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
 
   useEffect(() => {
     // 1. Only connect if user is logged in
-    if (!user) {
+    if (!user || !token) {
       if (socket) {
         socket.disconnect()
         setSocket(null)
@@ -55,7 +55,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     return () => {
       socketInstance.disconnect()
     }
-  }, [user?.id]) 
+  }, [user?.id, token]) 
 
   return (
     <SocketContext.Provider value={{ socket, isConnected }}>

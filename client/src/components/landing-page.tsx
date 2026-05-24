@@ -27,6 +27,7 @@ function ThemeToggle() {
 export function LandingPage() {
   const router = useRouter()
   const goToAuth = (tab?: string) => router.push(`/?auth=true${tab ? `&tab=${tab}` : ""}`)
+  const explore = () => router.push("/?v=feed&explore=true")
 
   const metrics = [
     ["10K+", "members"],
@@ -57,6 +58,9 @@ export function LandingPage() {
 
           <div className="flex items-center gap-2">
             <ThemeToggle />
+            <button onClick={explore} className="hidden h-9 rounded-xl px-4 text-sm font-semibold text-muted-foreground transition hover:text-foreground sm:block">
+              Explore
+            </button>
             <button onClick={() => goToAuth()} className="hidden h-9 rounded-xl px-4 text-sm font-semibold text-muted-foreground transition hover:text-foreground sm:block">
               Sign in
             </button>
@@ -90,8 +94,8 @@ export function LandingPage() {
                 Create your account
                 <ArrowRight className="h-4 w-4" />
               </button>
-              <button onClick={() => goToAuth()} className="premium-outline flex h-12 items-center justify-center rounded-xl px-6 text-sm font-bold text-foreground transition hover:bg-accent/60">
-                Open workspace
+              <button onClick={explore} className="premium-outline flex h-12 items-center justify-center rounded-xl px-6 text-sm font-bold text-foreground transition hover:bg-accent/60">
+                Explore public feed
               </button>
             </div>
 
@@ -190,6 +194,20 @@ export function LandingPage() {
           </div>
         </section>
 
+        <section className="mx-auto grid max-w-7xl gap-5 px-5 py-16 md:grid-cols-3 md:px-8">
+          {[
+            ["What guests can do", "Browse suggested posts, open public profiles, and search for people before creating an account."],
+            ["What sign-in unlocks", "Like posts, comment in conversations, follow users, publish media posts, and manage your own profile."],
+            ["What SocialNest is", "A cleaner social layer for discovering people and sharing updates without turning every screen into noise."],
+          ].map(([title, desc]) => (
+            <div key={title} className="premium-card rounded-2xl p-6">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Platform</p>
+              <h2 className="mt-3 text-lg font-bold tracking-tight">{title}</h2>
+              <p className="mt-3 text-sm leading-7 text-muted-foreground">{desc}</p>
+            </div>
+          ))}
+        </section>
+
         <section className="mx-auto max-w-5xl px-5 py-20 text-center md:px-8">
           <h2 className="text-4xl font-bold tracking-tight md:text-5xl">A calmer, sharper way to be social.</h2>
           <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-muted-foreground">
@@ -206,6 +224,9 @@ export function LandingPage() {
           <button onClick={() => goToAuth("register")} className="premium-button mt-9 inline-flex h-12 items-center justify-center gap-2 rounded-xl px-7 text-sm font-bold transition hover:opacity-90">
             Start building your circle
             <ArrowRight className="h-4 w-4" />
+          </button>
+          <button onClick={explore} className="ml-0 mt-3 inline-flex h-12 items-center justify-center rounded-xl px-7 text-sm font-bold text-muted-foreground transition hover:text-foreground sm:ml-3">
+            Browse first
           </button>
         </section>
       </main>

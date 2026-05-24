@@ -71,6 +71,7 @@ function PageContent() {
   const viewProfileId = searchParams.get("id") ? Number(searchParams.get("id")) : null
   const isNotifOpen = searchParams.get("modal") === "notifications"
   const showAuth = searchParams.get("auth") === "true"
+  const isPublicAppView = !user && (searchParams.has("v") || searchParams.get("explore") === "true")
 
   const navigate = (view: string, id?: number | null) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -108,7 +109,7 @@ function PageContent() {
   )
 
   // Not logged in — show landing or auth
-  if (!user) {
+  if (!user && !isPublicAppView) {
     if (showAuth) return <AuthFlow />
     return <LandingPage />
   }
@@ -117,8 +118,10 @@ function PageContent() {
   const navItems = [
     { icon: Home, label: "Home", view: "feed" },
     { icon: Search, label: "Explore", view: "search" },
-    { icon: User, label: "Profile", view: "profile" },
-    { icon: Settings, label: "Settings", view: "settings" },
+    ...(user ? [
+      { icon: User, label: "Profile", view: "profile" },
+      { icon: Settings, label: "Settings", view: "settings" },
+    ] : []),
   ]
 
   const SidebarContent = () => (
@@ -157,33 +160,35 @@ function PageContent() {
           )
         })}
 
-        <button
-          onClick={() => toggleNotifications(true)}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 ${
-            isNotifOpen ? "premium-button" : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/80"
-          }`}
-        >
-          <Bell className="w-4 h-4 flex-shrink-0" />
-          Notifications
-          {unreadCount > 0 && (
-            <span className="ml-auto min-w-5 h-5 bg-[#b9955e] text-white text-[10px] font-bold px-1.5 rounded-full flex items-center justify-center">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
-          )}
-        </button>
+        {user && (
+          <button
+            onClick={() => toggleNotifications(true)}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 ${
+              isNotifOpen ? "premium-button" : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/80"
+            }`}
+          >
+            <Bell className="w-4 h-4 flex-shrink-0" />
+            Notifications
+            {unreadCount > 0 && (
+              <span className="ml-auto min-w-5 h-5 bg-[#b9955e] text-white text-[10px] font-bold px-1.5 rounded-full flex items-center justify-center">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </button>
+        )}
       </nav>
 
       {/* Bottom */}
       <div className="p-3 border-t border-sidebar-border/70 space-y-2">
         <button
-          onClick={() => setIsCreatePostOpen(true)}
+          onClick={() => user ? setIsCreatePostOpen(true) : router.push("/?auth=true&tab=login")}
           className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl premium-button font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all"
         >
           <Plus className="w-4 h-4" />
-          New Post
+          {user ? "New Post" : "Sign in to post"}
         </button>
 
-        <div className="flex items-center gap-2.5 p-2 rounded-xl premium-outline hover:bg-accent/70 transition-colors group cursor-default">
+        {user ? <div className="flex items-center gap-2.5 p-2 rounded-xl premium-outline hover:bg-accent/70 transition-colors group cursor-default">
           <div className="w-8 h-8 rounded-full bg-secondary border border-border flex items-center justify-center text-xs font-bold overflow-hidden flex-shrink-0">
             {(user as any).profile_pic_url
               ? <img src={(user as any).profile_pic_url} alt="" className="w-full h-full object-cover" />
@@ -203,7 +208,12 @@ function PageContent() {
           >
             <LogOut className="w-3.5 h-3.5" />
           </button>
-        </div>
+        </div> : (
+          <div className="space-y-2 rounded-xl premium-outline p-3">
+            <p className="text-xs font-semibold">Browsing as guest</p>
+            <p className="text-[11px] leading-4 text-muted-foreground">Sign in to like, comment, follow, and publish.</p>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -255,8 +265,8 @@ function PageContent() {
             {currentView === "feed" && (
               <div className="mb-5 premium-card rounded-2xl p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">Command center</p>
-                  <h1 className="text-xl font-bold tracking-tight mt-1">Your social workspace</h1>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{user ? "Command center" : "Public preview"}</p>
+                  <h1 className="text-xl font-bold tracking-tight mt-1">{user ? "Your social workspace" : "Explore SocialNest"}</h1>
                 </div>
                 <div className="hidden sm:flex items-center gap-2 rounded-xl bg-secondary/70 px-3 py-2 text-xs font-semibold text-muted-foreground">
                   <Sparkles className="w-3.5 h-3.5 text-[#b9955e]" />
@@ -264,22 +274,28 @@ function PageContent() {
                 </div>
               </div>
             )}
-            {currentView === "feed" && <Feed onUserClick={(id) => navigate("profile", id)} />}
-            {currentView === "search" && <UserSearch onUserClick={(id) => navigate("profile", id)} />}
-            {currentView === "profile" && <ProfileView targetUserId={viewProfileId} onUserClick={(id) => navigate("profile", id)} />}
-            {currentView === "settings" && <SettingsView />}
+            {!user && (
+              <div className="mb-5 rounded-2xl border border-[#b9955e]/30 bg-[#b9955e]/10 p-4">
+                <p className="text-sm font-bold">You can browse freely.</p>
+                <p className="mt-1 text-sm text-muted-foreground">Create an account when you want to like, comment, follow someone, or publish your own post.</p>
+              </div>
+            )}
+            {currentView === "feed" && <Feed onUserClick={(id) => navigate("profile", id)} requireAuth={() => router.push("/?auth=true&tab=login")} />}
+            {currentView === "search" && <UserSearch onUserClick={(id) => navigate("profile", id)} requireAuth={() => router.push("/?auth=true&tab=login")} />}
+            {currentView === "profile" && <ProfileView targetUserId={viewProfileId} onUserClick={(id) => navigate("profile", id)} requireAuth={() => router.push("/?auth=true&tab=login")} />}
+            {user && currentView === "settings" && <SettingsView />}
           </div>
         </div>
       </main>
 
       {isMobile && (
-        <button onClick={() => setIsCreatePostOpen(true)} className="fixed bottom-6 right-6 z-10 w-12 h-12 premium-button rounded-2xl flex items-center justify-center shadow-xl hover:opacity-90 active:scale-95 transition-all">
+        <button onClick={() => user ? setIsCreatePostOpen(true) : router.push("/?auth=true&tab=login")} className="fixed bottom-6 right-6 z-10 w-12 h-12 premium-button rounded-2xl flex items-center justify-center shadow-xl hover:opacity-90 active:scale-95 transition-all">
           <Plus className="w-5 h-5" />
         </button>
       )}
 
-      <CreatePostModal isOpen={isCreatePostOpen} onClose={() => setIsCreatePostOpen(false)} />
-      <NotificationsModal isOpen={isNotifOpen} onClose={() => toggleNotifications(false)} onUserClick={(id) => navigate("profile", id)} />
+      {user && <CreatePostModal isOpen={isCreatePostOpen} onClose={() => setIsCreatePostOpen(false)} />}
+      {user && <NotificationsModal isOpen={isNotifOpen} onClose={() => toggleNotifications(false)} onUserClick={(id) => navigate("profile", id)} />}
     </div>
   )
 }

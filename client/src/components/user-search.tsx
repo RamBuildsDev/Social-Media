@@ -9,9 +9,10 @@ import { API_URL } from "@/lib/config"
 
 interface UserSearchProps {
   onUserClick: (id: number) => void
+  requireAuth?: () => void
 }
 
-export function UserSearch({ onUserClick }: UserSearchProps) {
+export function UserSearch({ onUserClick, requireAuth }: UserSearchProps) {
   const { token } = useAuth()
   const queryClient = useQueryClient()
   const [searchTerm, setSearchTerm] = useState("")
@@ -31,7 +32,8 @@ export function UserSearch({ onUserClick }: UserSearchProps) {
     queryKey: ["search", searchTerm],
     queryFn: async () => {
       if (!searchTerm) return { users: [] }
-      const res = await fetch(`${API_URL}/api/users/search?q=${searchTerm}`, { headers: { Authorization: `Bearer ${token}` } })
+      const headers = token ? { Authorization: `Bearer ${token}` } : undefined
+      const res = await fetch(`${API_URL}/api/users/search?q=${searchTerm}`, { headers })
       return res.json()
     },
     enabled: searchTerm.length > 0,
@@ -118,15 +120,25 @@ export function UserSearch({ onUserClick }: UserSearchProps) {
               </div>
 
               <button
-                onClick={() => isFollowing ? unfollowMutation.mutate(user.id) : followMutation.mutate(user.id)}
+                onClick={() => {
+                  if (!token) {
+                    requireAuth?.()
+                    return
+                  }
+                  isFollowing ? unfollowMutation.mutate(user.id) : followMutation.mutate(user.id)
+                }}
                 disabled={followMutation.isPending || unfollowMutation.isPending}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 flex-shrink-0 ${
-                  isFollowing
+                  !token
+                    ? "premium-button hover:opacity-90"
+                    : isFollowing
                     ? "border border-border/60 text-muted-foreground hover:text-foreground hover:border-border"
                     : "premium-button hover:opacity-90"
                 }`}
               >
-                {isFollowing
+                {!token
+                  ? <><UserPlus className="w-3.5 h-3.5" /> Sign in</>
+                  : isFollowing
                   ? <><UserMinus className="w-3.5 h-3.5" /> Unfollow</>
                   : <><UserPlus className="w-3.5 h-3.5" /> Follow</>
                 }

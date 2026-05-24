@@ -21,9 +21,10 @@ interface PostCardProps {
   commentsEnabled?: boolean
   onUserClick: (id: number) => void
   isSuggested?: boolean
+  requireAuth?: () => void
 }
 
-export function PostCard({ id, content, media_url, user, createdAt, likeCount, commentCount, hasLiked, commentsEnabled = true, onUserClick, isSuggested = false }: PostCardProps) {
+export function PostCard({ id, content, media_url, user, createdAt, likeCount, commentCount, hasLiked, commentsEnabled = true, onUserClick, isSuggested = false, requireAuth }: PostCardProps) {
   const { user: currentUser, token } = useAuth()
   const queryClient = useQueryClient()
   const [showComments, setShowComments] = useState(false)
@@ -61,6 +62,10 @@ export function PostCard({ id, content, media_url, user, createdAt, likeCount, c
   })
 
   const handleLike = () => {
+    if (!currentUser) {
+      requireAuth?.()
+      return
+    }
     setLikePopping(true)
     setTimeout(() => setLikePopping(false), 350)
     toggleLikeMutation.mutate()
@@ -139,7 +144,13 @@ export function PostCard({ id, content, media_url, user, createdAt, likeCount, c
 
         {commentsEnabled ? (
           <button
-            onClick={() => setShowComments(!showComments)}
+            onClick={() => {
+              if (!currentUser) {
+                requireAuth?.()
+                return
+              }
+              setShowComments(!showComments)
+            }}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm transition-all duration-150 ${showComments ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}
           >
             <MessageCircle className="w-4 h-4" />

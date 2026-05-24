@@ -12,9 +12,10 @@ import { API_URL } from "@/lib/config"
 interface ProfileViewProps {
   targetUserId?: number | null
   onUserClick?: (id: number) => void
+  requireAuth?: () => void
 }
 
-export function ProfileView({ targetUserId, onUserClick }: ProfileViewProps) {
+export function ProfileView({ targetUserId, onUserClick, requireAuth }: ProfileViewProps) {
   const { user: currentUser, token } = useAuth()
   const queryClient = useQueryClient()
   const [modalType, setModalType] = useState<"followers" | "following" | null>(null)
@@ -27,21 +28,23 @@ export function ProfileView({ targetUserId, onUserClick }: ProfileViewProps) {
     queryKey: ["profile", isMe ? "me" : targetUserId],
     queryFn: async () => {
       const url = isMe ? `${API_URL}/api/users/stats` : `${API_URL}/api/users/${targetUserId}/profile`
-      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      const headers = token ? { Authorization: `Bearer ${token}` } : undefined
+      const res = await fetch(url, { headers })
       if (!res.ok) throw new Error("Failed")
       return res.json()
     },
-    enabled: !!token,
+    enabled: !!token || !isMe,
   })
 
   const { data: postsData, isLoading: postsLoading } = useQuery({
     queryKey: ["posts", isMe ? "me" : targetUserId],
     queryFn: async () => {
       const url = isMe ? `${API_URL}/api/posts/my` : `${API_URL}/api/posts/user/${targetUserId}`
-      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      const headers = token ? { Authorization: `Bearer ${token}` } : undefined
+      const res = await fetch(url, { headers })
       return res.json()
     },
-    enabled: !!token,
+    enabled: !!token || !isMe,
   })
 
   const displayUser = isMe ? currentUser : profileData?.user
@@ -140,15 +143,19 @@ export function ProfileView({ targetUserId, onUserClick }: ProfileViewProps) {
 
             {!isMe && (
               <button
-                onClick={() => toggleFollowMutation.mutate()}
+                onClick={() => token ? toggleFollowMutation.mutate() : requireAuth?.()}
                 disabled={toggleFollowMutation.isPending}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 ${
-                  isFollowing
+                  !token
+                    ? "premium-button hover:opacity-90"
+                    : isFollowing
                     ? "border border-border/60 text-muted-foreground hover:text-foreground hover:border-border"
                     : "premium-button hover:opacity-90"
                 }`}
               >
-                {toggleFollowMutation.isPending
+                {!token
+                  ? <><UserPlus className="w-3.5 h-3.5" /> Sign in to follow</>
+                  : toggleFollowMutation.isPending
                   ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   : isFollowing
                     ? <><UserMinus className="w-3.5 h-3.5" /> Unfollow</>
@@ -223,6 +230,7 @@ export function ProfileView({ targetUserId, onUserClick }: ProfileViewProps) {
                 hasLiked={post.has_liked}
                 commentsEnabled={post.comments_enabled}
                 onUserClick={onUserClick || (() => {})}
+                requireAuth={requireAuth}
               />
             ))}
           </div>

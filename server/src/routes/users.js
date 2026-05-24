@@ -1,5 +1,5 @@
 const express = require("express");
-const { authenticateToken } = require("../middleware/auth");
+const { authenticateToken, optionalAuth } = require("../middleware/auth");
 const { removeFollower } = require("../controllers/users"); 
 const { getUserById } = require("../controllers/users"); 
 const upload = require("../middleware/upload"); // Reuse the S3 upload middleware
@@ -24,7 +24,7 @@ const router = express.Router();
  */
 
 // TODO: POST /api/users/search - Search a user
-router.get("/search", authenticateToken, search);
+router.get("/search", optionalAuth, search);
 
 // TODO: POST /api/users/follow - Follow a user
 router.post("/follow", authenticateToken, follow);
@@ -51,7 +51,7 @@ router.delete("/followers/:user_id(\\d+)", authenticateToken, removeFollower);
 
 
 // Add this route
-router.get("/:id(\\d+)/profile", authenticateToken, getUserById);
+router.get("/:id(\\d+)/profile", optionalAuth, getUserById);
 
 router.put(
   "/profile-pic", 

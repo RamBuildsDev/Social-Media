@@ -115,7 +115,7 @@ async function search(req, res) {
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit || "20", 10)));
     const offset = (page - 1) * limit;
 
-    const users = await findUsersByName(q, limit, offset, req.user.id);
+    const users = await findUsersByName(q, limit, offset, req.user?.id || 0);
     return res.json({ q, page, limit, count: users.length, users });
   } catch (err) {
     console.error("User search error:", err);
@@ -166,7 +166,7 @@ async function removeFollower(req, res) {
 async function getUserById(req, res) {
   try {
     const targetId = Number(req.params.id);
-    const myId = req.user.id;
+    const myId = req.user?.id || 0;
     if (!Number.isInteger(targetId)) return res.status(400).json({ error: "Invalid ID" });
 
     const user = await getPublicProfileModel(targetId, myId);

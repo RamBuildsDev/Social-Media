@@ -180,12 +180,12 @@ const getGlobalFeed = async (limit = 20, offset = 0, excludeUserId) => {
      FROM posts p
      JOIN users u ON p.user_id = u.id
      WHERE p.is_deleted = FALSE 
-       AND p.user_id != $3 -- Exclude my own posts from suggestions
+       AND ($3 = 0 OR p.user_id != $3)
      ORDER BY p.created_at DESC
      LIMIT $1 OFFSET $2`,
     [limit, offset, excludeUserId]
   );
-  return result.rows;
+  return result.rows.map(post => ({ ...post, is_suggested: true }));
 };
 const getMixedFeed = async (userId, limit = 20, offset = 0) => {
   const result = await query(
