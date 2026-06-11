@@ -166,7 +166,7 @@ export function AuthFlow() {
               {/* LOGIN */}
               {activeTab === "login" && (
                 <form onSubmit={handleLogin} className="space-y-3">
-                  <Input className={inputCls} placeholder="Username" value={loginUsername} onChange={e => setLoginUsername(e.target.value)} disabled={isLoading} />
+                  <Input className={inputCls} placeholder="Username or email" value={loginUsername} onChange={e => setLoginUsername(e.target.value)} disabled={isLoading} />
                   <div className="relative">
                     <Input
                       type={showPassword ? "text" : "password"}

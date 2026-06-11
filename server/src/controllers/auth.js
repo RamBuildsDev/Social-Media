@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const {
   createUser,
+  getUserByEmail,
   getUserByUsername,
   verifyPassword,
 } = require("../models/user");
@@ -9,6 +10,16 @@ const logger = require("../utils/logger");
 const { query } = require("../utils/database"); 
 const { sendEmail } = require("../utils/mailer");
 
+const toAuthUser = (user) => ({
+  id: user.id,
+  username: user.username,
+  email: user.email,
+  full_name: user.full_name,
+  profile_pic_url: user.profile_pic_url,
+  notifications_enabled: user.notifications_enabled,
+  created_at: user.created_at,
+});
+
 /**
  * Step 1: Generate OTP and send to email
  * Body: { username, email }
@@ -16,19 +27,21 @@ const { sendEmail } = require("../utils/mailer");
 const sendOtp = async (req, res) => {
   try {
     const { username, email } = req.body;
+    const cleanUsername = username?.toLowerCase();
+    const cleanEmail = email?.trim().toLowerCase();
 
     if (!username || !email) {
       return res.status(400).json({ error: "Username and email are required" });
     }
 
     // 1. Check if username or email already exists
-    const existingUser = await getUserByUsername(username);
+    const existingUser = await getUserByUsername(cleanUsername);
     if (existingUser) {
       return res.status(409).json({ error: "Username already taken" });
     }
     
     // Check email uniqueness (Manual query since model doesn't have getByEmail yet)
-    const emailCheck = await query("SELECT id FROM users WHERE email = $1", [email]);
+    const emailCheck = await query("SELECT id FROM users WHERE LOWER(email) = LOWER($1)", [cleanEmail]);
     if (emailCheck.rowCount > 0) {
       return res.status(409).json({ error: "Email already registered" });
     }
@@ -43,12 +56,12 @@ const sendOtp = async (req, res) => {
        VALUES ($1, $2, $3)
        ON CONFLICT (email) 
        DO UPDATE SET otp_code = $2, expires_at = $3`,
-      [email, otp, expiresAt]
+      [cleanEmail, otp, expiresAt]
     );
 
     // 4. Send Email
     const emailSent = await sendEmail(
-      email,
+      cleanEmail,
       "Your Verification Code - Social Media",
       `<h3>Welcome to Social Media!</h3>
        <p>Your verification code is:</p>
@@ -60,7 +73,7 @@ const sendOtp = async (req, res) => {
       return res.status(500).json({ error: "Failed to send email" });
     }
 
-    logger.verbose(`OTP sent to ${email}`);
+    logger.verbose(`OTP sent to ${cleanEmail}`);
     res.json({ message: "OTP sent successfully" });
 
   } catch (error) {
@@ -77,11 +90,12 @@ const register = async (req, res) => {
   try {
     const { username, email, password, full_name, otp } = req.body;
     const cleanUsername = username.toLowerCase();
+    const cleanEmail = email.trim().toLowerCase();
 
     // 1. Verify OTP
     const otpRecord = await query(
       "SELECT * FROM verification_codes WHERE email = $1",
-      [email]
+      [cleanEmail]
     );
 
     if (otpRecord.rowCount === 0) {
@@ -101,27 +115,22 @@ const register = async (req, res) => {
     }
 
     // 2. Create user (Password hashing happens inside createUser model)
-    const user = await createUser({ cleanUsername, email, password, full_name });
+    const user = await createUser({ cleanUsername, email: cleanEmail, password, full_name });
 
     // 3. Delete used OTP
-    await query("DELETE FROM verification_codes WHERE email = $1", [email]);
+    await query("DELETE FROM verification_codes WHERE email = $1", [cleanEmail]);
 
     // 4. Generate token
     const token = generateToken({
       userId: user.id,
-      cleanUsername: user.cleanUsername,
+      username: user.username,
     });
 
     logger.verbose(`New user registered: ${cleanUsername}`);
 
     res.status(201).json({
       message: "User registered successfully",
-      user: {
-        id: user.id,
-        cleanUsername: user.cleanUsername,
-        email: user.email,
-        full_name: user.full_name,
-      },
+      user: toAuthUser(user),
       token,
     });
   } catch (error) {
@@ -136,9 +145,11 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { username, password } = req.body;
-    const cleanUsername = username.toLowerCase();
+    const loginIdentifier = username.trim().toLowerCase();
 
-    const user = await getUserByUsername(cleanUsername);
+    const user = loginIdentifier.includes("@")
+      ? await getUserByEmail(loginIdentifier)
+      : await getUserByUsername(loginIdentifier);
     if (!user) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
@@ -150,19 +161,14 @@ const login = async (req, res) => {
 
     const token = generateToken({
       userId: user.id,
-      cleanUsername: user.cleanUsername,
+      username: user.username,
     });
 
-    logger.verbose(`User logged in: ${cleanUsername}`);
+    logger.verbose(`User logged in: ${user.username}`);
 
     res.json({
       message: "Login successful",
-      user: {
-        id: user.id,
-        cleanUsername: user.cleanUsername,
-        email: user.email,
-        full_name: user.full_name,
-      },
+      user: toAuthUser(user),
       token,
     });
   } catch (error) {
@@ -180,9 +186,11 @@ const getProfile = async (req, res) => {
     res.json({
       user: {
         id: user.id,
-        cleanUsername: user.cleanUsername,
+        username: user.username,
         email: user.email,
         full_name: user.full_name,
+        profile_pic_url: user.profile_pic_url,
+        notifications_enabled: user.notifications_enabled,
         created_at: user.created_at,
       },
     });
