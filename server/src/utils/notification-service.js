@@ -1,6 +1,8 @@
 const { query } = require("./database");
 const { sendEmail } = require("./mailer");
 
+const APP_URL = process.env.APP_URL || "https://social-nestt.vercel.app/";
+
 /**
  * Centralized Notification Handler
  * - Saves to DB
@@ -53,7 +55,7 @@ async function sendNotification({ req, recipientId, type, postId = null }) {
           <h2>Hello ${recipient.full_name},</h2>
           <p><strong>@${sender.username}</strong> ${getActionText(type)}</p>
           <br/>
-          <a href="http://localhost:3000" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+          <a href="${APP_URL}" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
             Open App
           </a>
         </div>
