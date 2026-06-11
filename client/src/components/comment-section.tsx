@@ -52,7 +52,7 @@ export function CommentSection({ postId, onUserClick }: CommentSectionProps) {
 
   return (
     <div className="pt-4 border-t border-border/50 space-y-5">
-      <div className="rounded-2xl border border-border/70 bg-background/70 p-2 shadow-sm">
+      <div className="space-y-3">
         <Textarea
           placeholder="Write a comment..."
           value={newComment}
@@ -64,9 +64,9 @@ export function CommentSection({ postId, onUserClick }: CommentSectionProps) {
             }
           }}
           rows={3}
-          className="min-h-24 resize-none border-0 bg-transparent px-2 py-2 text-sm shadow-none focus-visible:ring-0"
+          className="h-28 min-h-28 w-full resize-none rounded-2xl border border-border/70 bg-card px-4 py-3 text-sm leading-6 shadow-sm [field-sizing:fixed] focus-visible:border-ring/60 focus-visible:ring-2 focus-visible:ring-ring/20"
         />
-        <div className="flex justify-end border-t border-border/40 pt-2">
+        <div className="flex justify-end">
           <button
             type="button"
             onClick={() => addCommentMutation.mutate()}
