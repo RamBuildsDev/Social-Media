@@ -10,6 +10,8 @@ const logger = require("../utils/logger");
 const { query } = require("../utils/database"); 
 const { sendEmail } = require("../utils/mailer");
 
+const APP_URL = process.env.APP_URL || "https://social-nestt.vercel.app/";
+
 const toAuthUser = (user) => ({
   id: user.id,
   username: user.username,
@@ -63,10 +65,15 @@ const sendOtp = async (req, res) => {
     const emailSent = await sendEmail(
       cleanEmail,
       "Your Verification Code - Social Media",
-      `<h3>Welcome to Social Media!</h3>
-       <p>Your verification code is:</p>
-       <h1>${otp}</h1>
-       <p>This code expires in 10 minutes.</p>`
+      `<div style="font-family: Arial, sans-serif; padding: 20px;">
+         <h3>Welcome to SocialNest, @${cleanUsername}!</h3>
+         <p>Your verification code is:</p>
+         <h1>${otp}</h1>
+         <p>This code expires in 10 minutes.</p>
+         <a href="${APP_URL}" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+           Open App
+         </a>
+       </div>`
     );
 
     if (!emailSent) {
@@ -165,6 +172,28 @@ const login = async (req, res) => {
     });
 
     logger.verbose(`User logged in: ${user.username}`);
+
+    const loginTime = new Date().toLocaleString("en-US", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "Asia/Kolkata",
+    });
+    const loginLocation = req.ip || "Unknown location";
+
+    sendEmail(
+      user.email,
+      `Security Alert: New login for @${user.username}`,
+      `<div style="font-family: Arial, sans-serif; padding: 20px;">
+         <h2>Hello ${user.full_name},</h2>
+         <p>There was a new login to your SocialNest account <strong>@${user.username}</strong>.</p>
+         <p><strong>Time:</strong> ${loginTime} IST</p>
+         <p><strong>IP:</strong> ${loginLocation}</p>
+         <p>If this was not you, please change your password immediately.</p>
+         <a href="${APP_URL}" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+           Open App
+         </a>
+       </div>`
+    ).catch((err) => console.error("[LOGIN MAIL ERROR]", err));
 
     res.json({
       message: "Login successful",
