@@ -49,11 +49,13 @@ async function sendNotification({ req, recipientId, type, postId = null }) {
     if (recipient.notifications_enabled) {
       console.log(`[MAIL] Sending ${type} email to ${recipient.email}`);
       
-      const subject = `New Activity: ${sender.full_name} ${getActionText(type)}`;
+      const senderHandle = sender.username ? `@${sender.username}` : "A SocialNest user";
+      const senderName = sender.full_name || senderHandle;
+      const subject = `New Activity: ${senderHandle} ${getActionText(type)}`;
       const html = `
         <div style="font-family: Arial, sans-serif; padding: 20px;">
           <h2>Hello ${recipient.full_name},</h2>
-          <p><strong>@${sender.username}</strong> ${getActionText(type)}</p>
+          <p><strong>${senderName}</strong> (${senderHandle}) ${getActionText(type)}</p>
           <br/>
           <a href="${APP_URL}" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
             Open App
