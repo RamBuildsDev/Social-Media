@@ -4,16 +4,17 @@ import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useAuth } from "./auth-provider"
 import { Textarea } from "@/components/ui/textarea"
-import { Loader2, Send } from "lucide-react"
+import { Loader2, Send, Trash2 } from "lucide-react"
 import { API_URL } from "@/lib/config"
 
 interface CommentSectionProps {
   postId: number
+  postOwnerId?: number
   onUserClick: (id: number) => void 
 }
 
-export function CommentSection({ postId, onUserClick }: CommentSectionProps) {
-  const { token } = useAuth()
+export function CommentSection({ postId, postOwnerId, onUserClick }: CommentSectionProps) {
+  const { token, user } = useAuth()
   const queryClient = useQueryClient()
   const [newComment, setNewComment] = useState("")
 
@@ -48,7 +49,24 @@ export function CommentSection({ postId, onUserClick }: CommentSectionProps) {
     },
   })
 
+  const deleteCommentMutation = useMutation({
+    mutationFn: async (commentId: number) => {
+      const res = await fetch(`${API_URL}/api/comments/${commentId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error("Failed to delete comment")
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["comments", postId] })
+      queryClient.invalidateQueries({ queryKey: ["feed"] })
+      queryClient.invalidateQueries({ queryKey: ["my-posts"] })
+      queryClient.invalidateQueries({ queryKey: ["posts"] })
+    },
+  })
+
   const comments = data?.data || []
+  const currentUserId = Number(user?.id)
 
   return (
     <div className="pt-4 border-t border-border/50 space-y-5">
@@ -85,17 +103,36 @@ export function CommentSection({ postId, onUserClick }: CommentSectionProps) {
         ) : comments.length === 0 ? (
           <p className="py-2 text-center text-sm text-muted-foreground">No comments yet.</p>
         ) : (
-          comments.map((c: any) => (
-            <div key={c.id} className="rounded-xl bg-secondary/40 px-3 py-2 text-sm">
-              <span 
-                className="font-bold cursor-pointer hover:underline"
-                onClick={() => onUserClick(c.user_id)}
-              >
-                {c.username}
-              </span>
-              <p className="mt-1 whitespace-pre-wrap break-words text-muted-foreground">{c.content}</p>
-            </div>
-          ))
+          comments.map((c: any) => {
+            const canDelete = currentUserId === Number(c.user_id) || currentUserId === Number(postOwnerId)
+
+            return (
+              <div key={c.id} className="rounded-xl bg-secondary/40 px-3 py-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <span 
+                    className="font-bold cursor-pointer hover:underline"
+                    onClick={() => onUserClick(c.user_id)}
+                  >
+                    {c.username}
+                  </span>
+                  {canDelete && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm("Delete this comment?")) deleteCommentMutation.mutate(c.id)
+                      }}
+                      disabled={deleteCommentMutation.isPending}
+                      className="ml-auto rounded-lg p-1 text-muted-foreground/60 transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-40"
+                      title="Delete comment"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                <p className="mt-1 whitespace-pre-wrap break-words text-muted-foreground">{c.content}</p>
+              </div>
+            )
+          })
         )}
       </div>
     </div>

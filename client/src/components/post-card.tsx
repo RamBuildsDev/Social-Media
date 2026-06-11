@@ -35,7 +35,7 @@ export function PostCard({ id, content, media_url, user, createdAt, likeCount, c
 
   useEffect(() => { setIsLiked(hasLiked); setLikes(likeCount) }, [hasLiked, likeCount])
 
-  const isOwner = currentUser?.username === user.username
+  const isOwner = Number(currentUser?.id) === Number(user.id)
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
@@ -170,7 +170,7 @@ export function PostCard({ id, content, media_url, user, createdAt, likeCount, c
 
       {commentsEnabled && showComments && (
         <div className="mx-4 pb-4 pt-3 border-t border-border/40">
-          <CommentSection postId={id} onUserClick={onUserClick} />
+          <CommentSection postId={id} postOwnerId={user.id} onUserClick={onUserClick} />
         </div>
       )}
 
